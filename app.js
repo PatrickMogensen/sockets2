@@ -5,15 +5,18 @@ var jsonwebtoken = require('jsonwebtoken');
 var secret = "secret";
 const port = process.env.PORT || 4000
 var cors = require('cors');
-//app.use(cors());
+app.use(cors());
 
 var io = require('socket.io')(http, {
+    /*
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
         allowedHeaders: ["my-custom-header"],
         credentials: true
     }
+            
+ */
 });
 app.set('socketIo', io);
 app
