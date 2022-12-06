@@ -3,6 +3,7 @@ var http = require('http').Server(app);
 const { MongoClient, ObjectId} = require('mongodb');
 var jsonwebtoken = require('jsonwebtoken');
 var secret = "secret";
+const port = process.env.PORT || 4000
 
 var io = require('socket.io')(http, {
     cors: {
