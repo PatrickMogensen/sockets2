@@ -8,7 +8,7 @@ const port = process.env.PORT || 4000
 var io = require('socket.io')(http, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        allowHeaders: "*",
     }
 });
 app.set('socketIo', io);
@@ -228,6 +228,7 @@ io.on('connection', function(socket){
     });
 });
 
+require()
 
 
 app.listen(port, () => console.log(`Now browse :${port}`));
