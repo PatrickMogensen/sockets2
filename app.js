@@ -9,11 +9,11 @@ var cors = require('cors');
 
 var io = require('socket.io')(http, {
     cors: {
-        origin: "https://lionfish-app-hsj4b.ondigitalocean.app/",
+        origin: "*",
         methods: ["GET", "POST"],
-        transports: ['websocket', 'polling'],
+        allowedHeaders: ["my-custom-header"],
         credentials: true
-    },
+    }
 });
 app.set('socketIo', io);
 app
