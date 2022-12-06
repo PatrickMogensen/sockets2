@@ -9,7 +9,7 @@ var cors = require('cors');
 
 var io = require('socket.io')(http, {
     cors: {
-        origin: "http://localhost:8100",
+        origin: "https://lionfish-app-hsj4b.ondigitalocean.app/",
         methods: ["GET", "POST"],
         transports: ['websocket', 'polling'],
         credentials: true
