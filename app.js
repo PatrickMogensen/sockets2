@@ -4,6 +4,8 @@ const { MongoClient, ObjectId} = require('mongodb');
 var jsonwebtoken = require('jsonwebtoken');
 var secret = "secret";
 const port = process.env.PORT || 4000
+var cors = require('cors');
+app.use(cors());
 
 var io = require('socket.io')(http, {
     cors: {
@@ -12,6 +14,7 @@ var io = require('socket.io')(http, {
     }
 });
 app.set('socketIo', io);
+app
 
 app.get('/accept-invite', function(req, res){
     var socket = app.get('socketIo');
