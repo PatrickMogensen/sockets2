@@ -268,27 +268,20 @@ app.post('/send-invite', function(req, res) {
         let invitedEmail = req.body.invitedEmail;
         console.log("invitedEmail: " + invitedEmail);
         console.log("invitedBy: " + _id);
-        client.db('test').collection('users').findOne({email: invitedEmail}).then((user) => {
+        client.db('test').collection('invites').findOne({email: invitedEmail, invitedBy:_id}).then((user) => {
             if (!user) {
-                console.log("user not found: " + invitedEmail);
+                console.log("Invite does not exist; creating invite" + invitedEmail);
                 client.db('test').collection('invites').insertOne({
                     invitedBy: _id,
                     email: invitedEmail,
                     acceptedInvite: false
                 }).then((result) => {
-                    console.log("invite inserted: " + result);
+                    console.log("invite inserted: " + JSON.stringify(result));
                     res.status(200).send("Invite sent");
                 })
             } else {
-                console.log("user found: " + invitedEmail);
-                client.db('test').collection('invites').insertOne({
-                    invitedBy: _id,
-                    invited: invitedEmail,
-                    acceptedInvite: false
-                }).then((result) => {
-                    console.log("invite inserted: " + result);
-                    res.status(200).send("Invite sent");
-                })
+                console.log("Invite already exists" + invitedEmail);
+                res.status(200).send("Invite already exists");
             }
         })
     } catch (e) {
@@ -331,6 +324,29 @@ app.post('/accept-invite', function(req, res) {
         console.log(e);
         res.status(500).send("Internal server error");
     }
+})
+
+app.get('/invites', function(req, res) {
+    try {
+        if(req.headers.authorization) {
+            authHeader = req.headers.authorization;
+            _id = getIdFromToken(authHeader);
+            console.log(" _id: " + _id + "authHeader: " + JSON.stringify(authHeader));
+            // finde email for users with _id = _id
+            client.db('test').collection('users').findOne({_id: new ObjectId(_id)}).then((user) => {
+                console.log("user: " + JSON.stringify(user));
+                client.db('test').collection('invites').find({email: user.email}).toArray().then((invites) => {
+                    res.status(200).send(invites);
+                })
+            })
+        } else {
+            res.status(401).send("Unauthorized");
+        }
+    } catch (e) {
+        console.log(e);
+        res.status(500).send("Internal server error");
+    }
+
 })
 
 
