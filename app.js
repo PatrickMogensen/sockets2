@@ -241,34 +241,38 @@ io.on('connection', function(socket){
 });
 
 
-function getIdFromToken(authHeader) {
+const auth = function(req, res, next) {
     let _id;
-    if (authHeader) {
-        let token = authHeader.split(' ')[1];
+    if (req.headers.authorization) {
+        let token = req.headers.authorization.split(' ')[1];
+
         let decoded = jsonwebtoken.verify(token, secret)
         if (decoded) {
             console.log("decoded " + JSON.stringify(decoded));
             console.log("decoded: " + decoded._id);
-            _id = decoded._id;
-            return _id;
+            _id = new ObjectId(decoded._id)
+            req._id = _id;
+            next();
         } else {
             res.status(401).send("Invalid token");
         }
 
     } else {
-        console.log("no token");
+        res.status(401).send("no token");
     }
 }
 
 //send invite
-app.post('/send-invite', function(req, res) {
+app.post('/send-invite', auth, function(req, res) {
     try {
-        authHeader = req.headers.authorization;
-        _id = getIdFromToken(authHeader);
+        _id = req._id
+
+
+        console.log("_id " + _id + "new ObjectId(_id) " + new ObjectId(_id) );
         let invitedEmail = req.body.invitedEmail;
         console.log("invitedEmail: " + invitedEmail);
         console.log("invitedBy: " + _id);
-        client.db('test').collection('invites').findOne({email: invitedEmail, invitedBy:_id}).then((user) => {
+        client.db('test').collection('invites').findOne({email: invitedEmail, invitedBy: _id}).then((user) => {
             if (!user) {
                 console.log("Invite does not exist; creating invite" + invitedEmail);
                 client.db('test').collection('invites').insertOne({
@@ -289,48 +293,50 @@ app.post('/send-invite', function(req, res) {
     }
     })
 
-app.post('/accept-invite', function(req, res) {
+app.post('/accept-invite', auth, function(req, res) {
     try {
-        authHeader = req.headers.authorization;
-        let newUserId = getIdFromToken(authHeader);
+        let newUserId = req._id
         let invitedEmail = req.body.invitedEmail;
-        console.log("invitedEmail: " + invitedEmail);
+        let invitedBy = req.body.inviterId;
+        console.log("inviterId: " + invitedBy);
+        console.log("req._id" + req._id);
 
-        // update invite where invited = newEmail and acceptedInvite = false to acceptedInvite = true
-        client.db('test').collection('invites').updateOne({
-            email: invitedEmail,
-            acceptedInvite: false
-        }, {$set: {acceptedInvite: true}}).then((result) => {
-            console.log("invite updated: " + JSON.stringify(result));
-            res.status(200).send("Invite accepted");
-            // set invitedBy as friend of newUserId and newUserId as friend of invitedBy
-            client.db('test').collection('invites').findOne({
+        console.log("_id " + req._id + "new ObjectId(_id) " + new ObjectId(req._id) );
+
+
+        if(invitedBy && invitedEmail) {
+            console.log("invitedEmail: " + invitedEmail);
+
+            // update invite where invited = newEmail and acceptedInvite = false to acceptedInvite = true
+            client.db('test').collection('invites').updateOne({
+                invitedBy: new ObjectId(invitedBy),
                 email: invitedEmail,
-                acceptedInvite: true
-            }).then((invite) => {
-
-                console.log("invite: " + JSON.stringify(invite));
-                client.db('test').collection('users').updateOne({_id: new ObjectId(newUserId)}, {$push: {friends: new ObjectId(invite.invitedBy)}}).then((result) => {
-                    console.log("user updated: " + JSON.stringify(result));
-                    client.db('test').collection('users').updateOne({_id: new ObjectId(invite.invitedBy)}, {$push: {friends: new ObjectId(newUserId)}}).then((result) => {
+                acceptedInvite: false
+            }, {$set: {acceptedInvite: true}}).then((result) => {
+                console.log("invite updated: " + JSON.stringify(result));
+                res.status(200).send("Invite accepted");
+                // set invitedBy as friend of newUserId and newUserId as friend of invitedBy
+                    client.db('test').collection('users').updateOne({_id: new ObjectId(newUserId)}, {$push: {friends: new ObjectId(invitedBy)}}).then((result) => {
                         console.log("user updated: " + JSON.stringify(result));
+                        client.db('test').collection('users').updateOne({_id: new ObjectId(invitedBy)}, {$push: {friends: new ObjectId(newUserId)}}).then((result) => {
+                            console.log("user updated: " + JSON.stringify(result));
+                        })
                     })
                 })
-            })
-
-
-        })
+        } else {
+            res.send("No invite found");
+        }
     } catch (e) {
         console.log(e);
         res.status(500).send("Internal server error");
     }
 })
 
-app.get('/invites', function(req, res) {
+app.get('/invites', auth, function(req, res) {
     try {
         if(req.headers.authorization) {
             authHeader = req.headers.authorization;
-            _id = getIdFromToken(authHeader);
+            _id = req._id
             console.log(" _id: " + _id + "authHeader: " + JSON.stringify(authHeader));
             // finde email for users with _id = _id
             client.db('test').collection('users').findOne({_id: new ObjectId(_id)}).then((user) => {
