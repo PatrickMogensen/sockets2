@@ -58,6 +58,7 @@ async function findOnlineFriends(id, onlineUsers) {
 
 
 function findData(id, onlineUsers) {
+    try{
     return new Promise(function(resolve, reject) {
     let friends
     client.db('test').collection('users').findOne({_id: id}).then((user) => {
@@ -91,11 +92,14 @@ function findData(id, onlineUsers) {
                 resolve({onlineFriends: uniqueOnlineFriends, offlineFriends: offlineFriends, invitedFriends: invitedFriends});
             })
         })
+
         })
     })
 
     })
-
+    } catch (err) {
+        console.log("error " + err);
+    }
 }
 
 
