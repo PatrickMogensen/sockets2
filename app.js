@@ -5,7 +5,10 @@ var jsonwebtoken = require('jsonwebtoken');
 var secret = "secret";
 const port = process.env.PORT || 4000
 const cors = require('cors');
-app.use(cors());
+const bodyParser = require('body-parser');
+app.use(bodyParser.json({extended: true}));
+
+app.use(cors({ origin: '*' }));
 
 var io = require('socket.io')(http, {
     cors: {
@@ -34,21 +37,21 @@ async function findOnlineFriends(id, onlineUsers) {
 
         let friends
         let onlineFriends = [];
-        client.db('test').collection('users').findOne({_id: id}).then((user) => {
-            console.log("user result " + user);
-            friends = user.friends;
-            console.log("friends " + friends);
-            friends.forEach((friend) => {
-                onlineUsers.forEach((onlineUser) => {
-                    // console.log("onlineUser.id " + onlineUser.id + " friend " + friend);
-                    if (friend.toString() == onlineUser.id.toString()) {
-                        console.log("match")
-                        onlineFriends.push({id: friend, socketId: onlineUser.socketId, firstName : onlineUser.firstName, lastName: onlineUser.lastName});
-                    }
-                })
+    client.db('test').collection('users').findOne({_id: id}).then((user) => {
+        console.log("user result " + user);
+        friends = user.friends;
+        console.log("friends " + friends);
+        friends.forEach((friend) => {
+            onlineUsers.forEach((onlineUser) => {
+               // console.log("onlineUser.id " + onlineUser.id + " friend " + friend);
+                if (friend.toString() == onlineUser.id.toString()) {
+                    console.log("match")
+                onlineFriends.push({id: friend, socketId: onlineUser.socketId, firstName : onlineUser.firstName, lastName: onlineUser.lastName});
+                }
             })
-            resolve(onlineFriends);
-        })
+         })
+    resolve(onlineFriends);
+    })
     })
 
 }
@@ -56,40 +59,40 @@ async function findOnlineFriends(id, onlineUsers) {
 
 function findData(id, onlineUsers) {
     return new Promise(function(resolve, reject) {
-        let friends
-        client.db('test').collection('users').findOne({_id: id}).then((user) => {
-            friendIds = user.friends;
+    let friends
+    client.db('test').collection('users').findOne({_id: id}).then((user) => {
+        friendIds = user.friends;
 
-            const projection = { _id: 1, firstName: 1, lastName: 1 };
-            client.db('test').collection('users').find({_id: {$in: friendIds}}, {projection}).toArray().then((friends) => {
+        const projection = { _id: 1, firstName: 1, lastName: 1 };
+        client.db('test').collection('users').find({_id: {$in: friendIds}}, {projection}).toArray().then((friends) => {
 
-                findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
-                    console.log("onlineFriends fundet " + JSON.stringify(onlineFriends));
+        findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
+            console.log("onlineFriends fundet " + JSON.stringify(onlineFriends));
 
-                    let offlineFriends = [];
+            let offlineFriends = [];
 
-                    //hvis onlineFriends indeholder friend, så skal den ikke tilføjes til offlineFriends
-                    let onlineFriendsIds = onlineFriends.map((friend) => friend.id.toString());
-                    console.log("onlineFriendsIds " + onlineFriendsIds);
-                    console.log("typeof onlineFriendsIds " + typeof onlineFriendsIds[0] + " typeof friendIds " + typeof friendIds[0]);
-                    friends.forEach((friend) => {
-                        if (!onlineFriendsIds.includes(friend._id.toString())) {
-                            console.log("offline friend " + friend._id);
-                            offlineFriends.push(friend);
-                        }
-                    })
+            //hvis onlineFriends indeholder friend, så skal den ikke tilføjes til offlineFriends
+            let onlineFriendsIds = onlineFriends.map((friend) => friend.id.toString());
+            console.log("onlineFriendsIds " + onlineFriendsIds);
+            console.log("typeof onlineFriendsIds " + typeof onlineFriendsIds[0] + " typeof friendIds " + typeof friendIds[0]);
+            friends.forEach((friend) => {
+                if (!onlineFriendsIds.includes(friend._id.toString())) {
+                    console.log("offline friend " + friend._id);
+                    offlineFriends.push(friend);
+                }
+            })
 
-                    //remove duplicate ids of onlineFriends
-                    let uniqueOnlineFriends = onlineFriends.filter((friend, index, self) => index === self.findIndex((t) => (t.id === friend.id)))
+            //remove duplicate ids of onlineFriends
+            let uniqueOnlineFriends = onlineFriends.filter((friend, index, self) => index === self.findIndex((t) => (t.id === friend.id)))
 
-                    let invitedFriends = [];
-                    client.db('test').collection('invites').find({invitedBy: new ObjectId(id)}).toArray().then((invites) => {
-                        invitedFriends = invites;
-                        resolve({onlineFriends: uniqueOnlineFriends, offlineFriends: offlineFriends, invitedFriends: invitedFriends});
-                    })
-                })
+            let invitedFriends = [];
+            client.db('test').collection('invites').find({invitedBy: new ObjectId(id)}).toArray().then((invites) => {
+                invitedFriends = invites;
+                resolve({onlineFriends: uniqueOnlineFriends, offlineFriends: offlineFriends, invitedFriends: invitedFriends});
             })
         })
+        })
+    })
 
     })
 
@@ -101,76 +104,76 @@ function findData(id, onlineUsers) {
 
 io.on('connection', function(socket){
     console.log('a user connected: ' + socket.id);
-    try {
-        var id
-        const token = socket.handshake.headers.authorizationtoken
-        console.log("scoket.handshake.header: " + JSON.stringify(socket.handshake.headers.authorizationtoken))
-        if (token){
-            console.log("token " + token);
-            decoded = jsonwebtoken.verify(token, secret);
-            console.log("id " + JSON.stringify(decoded.id));
-            id = JSON.stringify(decoded.id).replace(/['"]+/g, '');
+        try {
+            var id
+            const token = socket.handshake.headers.authorizationtoken
+            console.log("scoket.handshake.header: " + JSON.stringify(socket.handshake.headers.authorizationtoken))
+            if (token){
+                console.log("token " + token);
+                decoded = jsonwebtoken.verify(token, secret);
+                console.log("id " + JSON.stringify(decoded._id));
+                id = JSON.stringify(decoded._id).replace(/['"]+/g, '');
 
+                
+                id = new ObjectId(id);
+            } else {
+                console.log("no token");
+            }
+                    console.log('Connected to Database')
+                    const users = client.db('test').collection('users')
+                    users.findOne({_id: id}).then((user) => {
+                        //add user if not already in array
+                            onlineUsers.push({id: user._id, socketId: socket.id, firstName: user.firstName, lastName: user.lastName});
 
-            id = new ObjectId(id);
-        } else {
-            console.log("no token");
+                        console.log("type of user: " + typeof onlineUsers[0].id + " " + "typeof friend" + typeof user.friends[0]);
+                        let friends = user.friends;
+
+                        findData(id, onlineUsers).then((data) => {
+                            console.log("data " + data);
+                            io.to(socket.id).emit('onlineFriends', data.onlineFriends);
+                            io.to(socket.id).emit('offlineFriends', data.offlineFriends);
+                            io.to(socket.id).emit('invitedFriends', data.invitedFriends);
+                        })
+
+                        findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
+                            console.log("onlineFriends fundet " + onlineFriends);
+                            onlineFriends.forEach((friend) => {
+                                findData(friend.id, onlineUsers).then((data) => {
+                                    io.to(friend.socketId).emit('onlineFriends', data.onlineFriends);
+                                    io.to(friend.socketId).emit('offlineFriends', data.offlineFriends);
+                                    io.to(friend.socketId).emit('invitedFriends', data.invitedFriends);
+                                })
+                            })
+                        })
+
+                        /*
+                        onlineUsers.forEach((onlineUser) => {
+                            //find online friends and emit friend offline
+                            console.log(findOnlineFriends(user._id, onlineUsers));
+                            findOnlineFriends(user._id, onlineUsers).then((onlineFriends) => {
+                                console.log("onlineFriends " + onlineFriends.length);
+                                console.log("onlineFriends " + JSON.stringify(onlineFriends));
+                                    findData(user._id, onlineUsers).then((data) => {
+                                        console.log("data " + JSON.stringify(data));
+                                        io.to(onlineFriend.socketId).emit('data', {data: data});
+                                })
+                            })
+
+                            if (friends.some((friend) => friend.toString() == onlineUser.id.toString())) {
+                                    io.to(socket.id).emit('friendOnline', onlineUser.id);
+                                    io.to(onlineUser.socketId).emit('friendOnline', id);
+                                } else {
+                                    io.to(socket.id).emit('friendOffline', onlineUser.id);
+                                }
+                        })
+                        */
+                    })
+            // users.push(user);
+        } catch (e) {
+            console.log(e);
         }
-        console.log('Connected to Database')
-        const users = client.db('test').collection('users')
-        users.findOne({_id: id}).then((user) => {
-            //add user if not already in array
-            onlineUsers.push({id: user._id, socketId: socket.id, firstName: user.firstName, lastName: user.lastName});
 
-            console.log("type of user: " + typeof onlineUsers[0].id + " " + "typeof friend" + typeof user.friends[0]);
-            let friends = user.friends;
-
-            findData(id, onlineUsers).then((data) => {
-                console.log("data " + data);
-                io.to(socket.id).emit('onlineFriends', data.onlineFriends);
-                io.to(socket.id).emit('offlineFriends', data.offlineFriends);
-                io.to(socket.id).emit('invitedFriends', data.invitedFriends);
-            })
-
-            findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
-                console.log("onlineFriends fundet " + onlineFriends);
-                onlineFriends.forEach((friend) => {
-                    findData(friend.id, onlineUsers).then((data) => {
-                        io.to(friend.socketId).emit('onlineFriends', data.onlineFriends);
-                        io.to(friend.socketId).emit('offlineFriends', data.offlineFriends);
-                        io.to(friend.socketId).emit('invitedFriends', data.invitedFriends);
-                    })
-                })
-            })
-
-            /*
-            onlineUsers.forEach((onlineUser) => {
-                //find online friends and emit friend offline
-                console.log(findOnlineFriends(user._id, onlineUsers));
-                findOnlineFriends(user._id, onlineUsers).then((onlineFriends) => {
-                    console.log("onlineFriends " + onlineFriends.length);
-                    console.log("onlineFriends " + JSON.stringify(onlineFriends));
-                        findData(user._id, onlineUsers).then((data) => {
-                            console.log("data " + JSON.stringify(data));
-                            io.to(onlineFriend.socketId).emit('data', {data: data});
-                    })
-                })
-
-                if (friends.some((friend) => friend.toString() == onlineUser.id.toString())) {
-                        io.to(socket.id).emit('friendOnline', onlineUser.id);
-                        io.to(onlineUser.socketId).emit('friendOnline', id);
-                    } else {
-                        io.to(socket.id).emit('friendOffline', onlineUser.id);
-                    }
-            })
-            */
-        })
-        // users.push(user);
-    } catch (e) {
-        console.log(e);
-    }
-
-    // find invited but unregistered friends
+        // find invited but unregistered friends
     try {
 
         const id = new ObjectId(socket.handshake.query.id);
@@ -193,24 +196,24 @@ io.on('connection', function(socket){
         console.log('user disconnected:' + socket.id);
 
         try {
-            //find online user with socket id and remove from onlineUsers array
-            onlineUsers.forEach((disconnectedUser, index) => {
-                if (disconnectedUser.socketId == socket.id) {
-                    let id = disconnectedUser.id;
-                    onlineUsers.splice(index, 1);
-                    findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
-                        console.log("onlineFriends fundet " + onlineFriends);
-                        onlineFriends.forEach((friend) => {
-                            findData(friend.id, onlineUsers).then((data) => {
-                                io.to(friend.socketId).emit('onlineFriends', data.onlineFriends);
-                                io.to(friend.socketId).emit('offlineFriends', data.offlineFriends);
-                                io.to(friend.socketId).emit('invitedFriends', data.invitedFriends);
-                            })
+        //find online user with socket id and remove from onlineUsers array
+        onlineUsers.forEach((disconnectedUser, index) => {
+            if (disconnectedUser.socketId == socket.id) {
+                let id = disconnectedUser.id;
+                onlineUsers.splice(index, 1);
+                findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
+                    console.log("onlineFriends fundet " + onlineFriends);
+                    onlineFriends.forEach((friend) => {
+                        findData(friend.id, onlineUsers).then((data) => {
+                            io.to(friend.socketId).emit('onlineFriends', data.onlineFriends);
+                            io.to(friend.socketId).emit('offlineFriends', data.offlineFriends);
+                            io.to(friend.socketId).emit('invitedFriends', data.invitedFriends);
                         })
                     })
+                })
 
 
-                }
+            }
 
                 /*
                 const users = client.db('test').collection('users')
@@ -227,14 +230,103 @@ io.on('connection', function(socket){
                     })
                     */
             })
-        } catch (e) {
-            console.log(e);
-        }
+    } catch (e) {
+        console.log(e);
+    }
     });
 });
 
 
+function getIdFromToken(authHeader) {
+    let _id;
+    if (authHeader) {
+        let token = authHeader.split(' ')[1];
+        let decoded = jsonwebtoken.verify(token, secret)
+        if (decoded) {
+            console.log("decoded " + JSON.stringify(decoded));
+            console.log("decoded: " + decoded._id);
+            _id = decoded._id;
+            return _id;
+        } else {
+            res.status(401).send("Invalid token");
+        }
+
+    } else {
+        console.log("no token");
+    }
+}
+
+//send invite
+app.post('/send-invite', function(req, res) {
+    try {
+        authHeader = req.headers.authorization;
+        _id = getIdFromToken(authHeader);
+        let invitedEmail = req.body.invitedEmail;
+        console.log("invitedEmail: " + invitedEmail);
+        console.log("invitedBy: " + _id);
+        client.db('test').collection('users').findOne({email: invitedEmail}).then((user) => {
+            if (!user) {
+                console.log("user not found: " + invitedEmail);
+                client.db('test').collection('invites').insertOne({
+                    invitedBy: _id,
+                    email: invitedEmail,
+                    acceptedInvite: false
+                }).then((result) => {
+                    console.log("invite inserted: " + result);
+                    res.status(200).send("Invite sent");
+                })
+            } else {
+                console.log("user already exists: " + invitedEmail);
+                // error user already exists
+                res.status(400).send("User already exists");
+
+            }
+        })
+    } catch (e) {
+        console.log(e);
+    }
+    })
+
+app.post('/accept-invite', function(req, res) {
+    try {
+        authHeader = req.headers.authorization;
+        let newUserId = getIdFromToken(authHeader);
+        let invitedEmail = req.body.invitedEmail;
+        console.log("invitedEmail: " + invitedEmail);
+
+        // update invite where invited = newEmail and acceptedInvite = false to acceptedInvite = true
+        client.db('test').collection('invites').updateOne({
+            email: invitedEmail,
+            acceptedInvite: false
+        }, {$set: {acceptedInvite: true}}).then((result) => {
+            console.log("invite updated: " + JSON.stringify(result));
+            res.status(200).send("Invite accepted");
+            // set invitedBy as friend of newUserId and newUserId as friend of invitedBy
+            client.db('test').collection('invites').findOne({
+                email: invitedEmail,
+                acceptedInvite: true
+            }).then((invite) => {
+
+                console.log("invite: " + JSON.stringify(invite));
+                client.db('test').collection('users').updateOne({_id: new ObjectId(newUserId)}, {$push: {friends: new ObjectId(invite.invitedBy)}}).then((result) => {
+                    console.log("user updated: " + JSON.stringify(result));
+                    client.db('test').collection('users').updateOne({_id: new ObjectId(invite.invitedBy)}, {$push: {friends: new ObjectId(newUserId)}}).then((result) => {
+                        console.log("user updated: " + JSON.stringify(result));
+                    })
+                })
+            })
+
+
+        })
+    } catch (e) {
+        console.log(e);
+        res.status(500).send("Internal server error");
+    }
+})
+
+
+
 
 http.listen(port, function(){
-    console.log('listening on *:3000');
+    console.log('listening on *:4000');
 });
