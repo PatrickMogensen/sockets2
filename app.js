@@ -276,10 +276,15 @@ app.post('/send-invite', function(req, res) {
                     res.status(200).send("Invite sent");
                 })
             } else {
-                console.log("user already exists: " + invitedEmail);
-                // error user already exists
-                res.status(400).send("User already exists");
-
+                console.log("user found: " + invitedEmail);
+                client.db('test').collection('invites').insertOne({
+                    invitedBy: _id,
+                    invited: invitedEmail,
+                    acceptedInvite: false
+                }).then((result) => {
+                    console.log("invite inserted: " + result);
+                    res.status(200).send("Invite sent");
+                })
             }
         })
     } catch (e) {
