@@ -19,15 +19,6 @@ var io = require('socket.io')(http, {
 })
 app.set('socketIo', io);
 
-app.get('/accept-invite', function(req, res){
-    var socket = app.get('socketIo');
-
-    socket.emit('acceptInvite', {data: 'test'});
-    res.send('test');
-
-})
-
-
 const uri = "mongodb+srv://backend_api:wUxq6JpeA5Q9MyBc@cluster0.uevphbe.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 var onlineUsers = [];
