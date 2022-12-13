@@ -13,7 +13,8 @@ app.use(cors({ origin: '*' }));
 var io = require('socket.io')(http, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        transports: ["websocket"],
 
     }
 })
@@ -25,7 +26,6 @@ var onlineUsers = [];
 
 async function findOnlineFriends(id, onlineUsers) {
     return new Promise(function(resolve, reject) {
-
         let friends
         let onlineFriends = [];
     client.db('test').collection('users').findOne({_id: id}).then((user) => {
@@ -37,7 +37,8 @@ async function findOnlineFriends(id, onlineUsers) {
                // console.log("onlineUser.id " + onlineUser.id + " friend " + friend);
                 if (friend.toString() == onlineUser.id.toString()) {
                     console.log("match")
-                onlineFriends.push({id: friend, socketId: onlineUser.socketId, firstName : onlineUser.firstName, lastName: onlineUser.lastName});
+                onlineFriends.push({id: friend, socketId: onlineUser.socketId,
+                    firstName : onlineUser.firstName, lastName: onlineUser.lastName});
                 }
             })
          })
@@ -73,7 +74,6 @@ function findData(id, onlineUsers) {
                     offlineFriends.push(friend);
                 }
             })
-
             //remove duplicate ids of onlineFriends
             let uniqueOnlineFriends = onlineFriends.filter((friend, index, self) => index === self.findIndex((t) => (t.id === friend.id)))
 
