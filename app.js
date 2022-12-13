@@ -118,7 +118,6 @@ io.on('connection', function(socket){
                         //add user if not already in array
                             onlineUsers.push({id: user._id, socketId: socket.id, firstName: user.firstName, lastName: user.lastName});
 
-                        console.log("type of user: " + typeof onlineUsers[0].id + " " + "typeof friend" + typeof user.friends[0]);
                         let friends = user.friends;
 
                         findData(id, onlineUsers).then((data) => {
