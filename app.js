@@ -90,6 +90,8 @@ function findData(id, onlineUsers) {
                 })
 
             })
+        } else {
+            resolve({})
         }
     })
 
