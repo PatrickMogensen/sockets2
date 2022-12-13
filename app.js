@@ -2,7 +2,8 @@ const app = require('express')()
 const http = require('http').Server(app)
 const { MongoClient, ObjectId } = require('mongodb')
 const jsonwebtoken = require('jsonwebtoken')
-const secret = 'secret'
+require('dotenv').config()
+const secret = process.env.SECRET
 const port = process.env.PORT || 4000
 const cors = require('cors')
 const bodyParser = require('body-parser')
@@ -20,7 +21,7 @@ const io = require('socket.io')(http, {
 })
 app.set('socketIo', io)
 
-const uri = 'mongodb+srv://backend_api:wUxq6JpeA5Q9MyBc@cluster0.uevphbe.mongodb.net/?retryWrites=true&w=majority'
+const uri = process.env.MONGODB
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 const onlineUsers = []
 
