@@ -13,7 +13,9 @@ app.use(cors({ origin: '*' }));
 var io = require('socket.io')(http, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        allowedHeaders: ["authorizationToken"]
+
     }
 })
 app.set('socketIo', io);
