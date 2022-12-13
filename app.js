@@ -54,37 +54,43 @@ function findData(id, onlineUsers) {
     return new Promise(function(resolve, reject) {
     let friends
     client.db('test').collection('users').findOne({_id: id}).then((user) => {
-        friendIds = user.friends;
+        if(user.friends) {
+            friendIds = user.friends;
 
-        const projection = { _id: 1, firstName: 1, lastName: 1 };
-        client.db('test').collection('users').find({_id: {$in: friendIds}}, {projection}).toArray().then((friends) => {
+            const projection = {_id: 1, firstName: 1, lastName: 1};
+            client.db('test').collection('users').find({_id: {$in: friendIds}}, {projection}).toArray().then((friends) => {
 
-        findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
-            console.log("onlineFriends fundet " + JSON.stringify(onlineFriends));
+                findOnlineFriends(id, onlineUsers).then((onlineFriends) => {
+                    console.log("onlineFriends fundet " + JSON.stringify(onlineFriends));
 
-            let offlineFriends = [];
+                    let offlineFriends = [];
 
-            //hvis onlineFriends indeholder friend, så skal den ikke tilføjes til offlineFriends
-            let onlineFriendsIds = onlineFriends.map((friend) => friend.id.toString());
-            console.log("onlineFriendsIds " + onlineFriendsIds);
-            console.log("typeof onlineFriendsIds " + typeof onlineFriendsIds[0] + " typeof friendIds " + typeof friendIds[0]);
-            friends.forEach((friend) => {
-                if (!onlineFriendsIds.includes(friend._id.toString())) {
-                    console.log("offline friend " + friend._id);
-                    offlineFriends.push(friend);
-                }
+                    //hvis onlineFriends indeholder friend, så skal den ikke tilføjes til offlineFriends
+                    let onlineFriendsIds = onlineFriends.map((friend) => friend.id.toString());
+                    console.log("onlineFriendsIds " + onlineFriendsIds);
+                    console.log("typeof onlineFriendsIds " + typeof onlineFriendsIds[0] + " typeof friendIds " + typeof friendIds[0]);
+                    friends.forEach((friend) => {
+                        if (!onlineFriendsIds.includes(friend._id.toString())) {
+                            console.log("offline friend " + friend._id);
+                            offlineFriends.push(friend);
+                        }
+                    })
+                    //remove duplicate ids of onlineFriends
+                    let uniqueOnlineFriends = onlineFriends.filter((friend, index, self) => index === self.findIndex((t) => (t.id === friend.id)))
+
+                    let invitedFriends = [];
+                    client.db('test').collection('invites').find({invitedBy: new ObjectId(id)}).toArray().then((invites) => {
+                        invitedFriends = invites;
+                        resolve({
+                            onlineFriends: uniqueOnlineFriends,
+                            offlineFriends: offlineFriends,
+                            invitedFriends: invitedFriends
+                        });
+                    })
+                })
+
             })
-            //remove duplicate ids of onlineFriends
-            let uniqueOnlineFriends = onlineFriends.filter((friend, index, self) => index === self.findIndex((t) => (t.id === friend.id)))
-
-            let invitedFriends = [];
-            client.db('test').collection('invites').find({invitedBy: new ObjectId(id)}).toArray().then((invites) => {
-                invitedFriends = invites;
-                resolve({onlineFriends: uniqueOnlineFriends, offlineFriends: offlineFriends, invitedFriends: invitedFriends});
-            })
-        })
-
-        })
+        }
     })
 
     })
@@ -288,7 +294,6 @@ app.post('/accept-invite', auth, function(req, res) {
         console.log("req._id" + req._id);
 
         console.log("_id " + req._id + "new ObjectId(_id) " + new ObjectId(req._id) );
-
 
         if(invitedBy && invitedEmail) {
             console.log("invitedEmail: " + invitedEmail);
