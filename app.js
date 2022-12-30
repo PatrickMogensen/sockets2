@@ -15,11 +15,20 @@ const io = require('socket.io')(http, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],
-    allowedHeaders: ['authorizationToken']
+    allowedHeaders: ['authorizationToken', 'origin', 'Access-Control-Allow-Origin']
 
   }
 })
+
+io.engine.on("initial_headers", (headers, req) => {
+  headers["Access-Control-Allow-Origin"] = "*";
+});
+
+io.engine.on("headers", (headers, req) => {
+  headers["Access-Control-Allow-Origin"] = "*";
+});
 app.set('socketIo', io)
+
 
 const uri = process.env.MONGODB
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true })
